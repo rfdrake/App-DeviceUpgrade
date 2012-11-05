@@ -63,3 +63,9 @@ no ability to unit test (if I rewrote the code to use modules then I could
 test most individual functions.  As of right now you would need to write a
 router emulator to test the entire thing rather than testing peices of it)
 
+I'd like to add an <include> directive in telrc so when you have a shared
+config between a bunch of users and the only change most of them make is for
+their TACACS username, they can pull a default config.
+
+I don't think cisco_ios_up works for hosts that don't have a username yet, so
+people without tacacs will not work.  I need to fix that.
