@@ -13,31 +13,6 @@ I'll attempt to explain the setup here.
 scripts
 =======
 
-mktelrc
--------
-
-Makes an example .telrc file that is used by 'tel' to connect to devices
-
-
-tel
----
-
-This script attempts to connect to almost anything that has a CLI.  That
-includes UNIX boxes, Dlink switches, allied telesis, cisco, trango,
-etc.
-
-Although it can be used with command line arguments similar to rancid's
-clogin, it's primarly designed to perform the initial connection and then
-handoff to the user via "interact()".  In other words, this is the program the
-Expect authors told me not to write, but generic enough that I hope they won't
-fault me for it.
-
-Ideally, I may convert this to a module so I can handoff the handle instead of
-execing a new perl process, but I generally prefer self-contained perl
-programs and separate modules.  It may be that if I modularized it there
-wouldn't be much reusable code, and it would become even more confusing to
-use.
-
 cisco_ios_up
 ------------
 
