@@ -1,0 +1,360 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Expect;
+use Getopt::Long;
+
+$Expect::Log_Stdout=1;
+
+my %defaults;
+$defaults{server} = "%%YOURFTPSERVER%%";
+$defaults{proto} = "tftp";
+$defaults{verify} = 1;
+$defaults{delete} = 1;
+$defaults{squeeze} = 0;
+$defaults{ftpuser} = "%%YOURFTPUSERNAMEHERE%%";
+$defaults{ftppass} = "%%YOURFTPPASSWORDHERE%%";
+$defaults{dir} = "IOS";
+$defaults{device} = "flash";
+$defaults{logincmd} = "clogin";
+$defaults{recursive} = 1;
+$defaults{protected_files} = [ qw ( private-config private-config.text multiple-fs vlan.dat root-cert ) ];
+$defaults{md5} = 1;
+my %config;
+
+GetOptions (
+    "interactive+"          => \$config{interactive},
+    "delete!"               => \$config{delete},
+    "squeeze!"              => \$config{squeeze},
+    "format!"               => \$config{format},
+    "server|tftpsrv=s"      => \$config{server},
+    "dir=s"                 => \$config{dir},
+    "protocol=s"            => \$config{proto},
+    "code=s"                => \$config{code},
+    "verify!"               => \$config{verify},
+    "device=s"              => \$config{device},
+    "bootdev=s"             => \$config{bootdev},
+    "bootflash=s"           => \$config{bootflash},
+    "archive!"              => \$config{archive},
+    "ftpuser=s"             => \$config{ftpuser},
+    "ftppass=s"             => \$config{ftppass},
+    "processor=s"           => \$config{proc},
+    "protected_files=s"     => \$config{protected_files},
+    "md5"                   => \$config{md5},
+    "recursive!"            => \$config{recursive},
+    "force!"                => \$config{force},
+);
+
+
+# this should be in a config file
+my @codes = (
+
+    { "26(2|1)[0-1]\$" => { code => "", dir => "IOS/2600", flashsize => "16384" } },
+    { "26(5|2|1)[0-1]XM\$" => { code => "", dir => "IOS/2600", flashsize => "32768", squeeze => 1 } },
+    { "uBR711[14]" => { code => "", dir => "IOS/ubr7100", device => "disk0" } },
+    { "uBR7225VXR" => { code => "", dir => "ubr7200", device => "disk2", proc => "NPE-G2", proto => 'ftp' } },
+    { "uBR7246VXR" => { code => "", dir => "IOS/ubr7200", device => "disk2", proc => "UBR7200-NPE-G1",
+                        bootflash => "", bootdev => "bootflash" } },
+    { "uBR72(23|46)" => { code => "", dir => "IOS/ubr7200", device => "disk1",
+                        bootflash => "", bootdev => "slot0" } },
+    { "AIR-AP123(1G|2AG|0B)-A-K9" => { code => "", dir => "IOS/1200", archive => "", } },
+    { "AIR-AP1220-IOS-UPGRD" => { code => "", dir => "IOS/1200", archive => 1 } },
+    { "2811" => { code => "", dir => "IOS/2800" } },
+    { "7120-(T3|4T1)" => { code => "", dir => "IOS/7100" } },
+    { "WS-C650[369].*" => { code => "", device => "disk0" } },
+    { "ME-2400.*" => { code => "", dir => "IOS/ME2400" } },
+    { "ME-3400.*" => { code => "", dir => "IOS/ME3400" } },
+    { "ME-C6524GT-8S" => { code => "", dir => "IOS/ME6500" } },
+    { "WS-C3750.*" => { code => "", dir => "IOS/3750" } },
+    { "WS-C2960-.*" => { code => "", dir=> "IOS/2960", archive => "1" } },
+    { "WS-C3550-12G" => { code => "", dir=> "IOS/3550" } },
+    { "WS-C29(50|50G|50T)-.*" => { code => "", dir=> "IOS/2950" } },
+    { "WS-C29(40)-.*" => { code => "", dir=> "IOS/2940" } },
+    { "371098-001" => { code => "", dir => "IOS/GESM", archive=> "1" } },
+    { "WS-CBS3020-HPQ" => { code => "", dir => "IOS/GESM", archive=> "1" } },
+    { "WS-C3560-48PS" => { code => "", dir=> "IOS/3560" } },
+    { "3745" => { code => "", dir => "IOS/3745", device => "flash" } },
+    { "1841" => { code => "", dir => "IOS/1800" } },
+    { "7120-T3" => { code => "", dir => "IOS/7100", device => "disk0" } },
+    { "7401ASR" => { code => "", dir => "IOS/7400", device => "disk0" } },
+    { "IAD2420" => { code => "", dir => "IOS/IAD2420", md5 => 0 } },
+    { "IAD2430" => { code => "", dir => "IOS/IAD2430", device => "slot0" } },
+    { "IAD2432" => { code => "", dir => "IOS/IAD2430", device => "flash" } },
+    { "VG224" => { code => "", dir => "IOS/VG224", device => "slot0" } },
+    { "WS-C3524-(PWR-)?XL" => { code => "", dir => "IOS/3500XL", recursive => 0 } },
+    { "WS-C29(24|12).?-XL" => { code => "", dir => "IOS/2900XL", recursive => 0 } },
+    { "WS-C3550-48" => { code => "", dir => "IOS/c3550" } },
+);
+
+
+my $exp = new Expect;
+
+sub find_type {
+    my $t = shift;
+    my $proc = shift;
+    for(@codes) {
+        my ($type) = keys(%$_);
+        my $value = $_->{$type};
+        next if (defined($proc) && defined($value->{proc}) && ($proc ne $value->{proc}));
+        return $value if ($t =~ $type);
+    }
+}
+
+sub send_verify {
+    my $values = shift;
+    my $image = shift;
+    return if (!$values->{verify});
+    if ($values->{md5}) {
+        $exp->send("verify /md5 $image\r");
+    } else {
+        $exp->send("verify $image\r");
+    }
+
+    # this needs to capture the verify output if md5 is set and if md5 != 1
+    # then compare the output to the contents of the md5 variable
+
+    $exp->expect(30,
+             [ qr/\./ => sub { exp_continue; } ],
+             [ qr/#/ => sub { } ],
+             [ timeout => sub { die "*** TIMEOUT in VERIFY\n"; } ]);
+}
+
+sub wait_for_download {
+    $exp->expect(600,
+        [ qr/Erase (slot\d+|flash): before copying\? \[confirm\]/ => sub { $exp->send("n"); exp_continue } ],
+        [ qr/Destination filename/ => sub { $exp->send("\r"); exp_continue } ],
+        [ qr/Accessing|\!|extracting.*/ => sub { exp_continue } ],
+        [ qr/#/ => sub { } ],
+        [ timeout => sub { die "*** TIMEOUT while TFTP\n"; } ]);
+}
+
+
+sub get_version {
+    my $host = shift;
+    my ($ver,$type,$flashsize,$proc);
+    my $type = "unknown";
+    my $ver = "unknown";
+
+    $exp->send("sh ver\r");
+
+    $exp->expect(100,
+           [ qr/System image file is "(\S+)"/ => sub { $ver = ($exp->matchlist)[0]; exp_continue; } ],
+           [ qr/[Cc]isco (\S+)\s+\((.*?)\).*?with \d+K/ => sub { $proc = ($exp->matchlist)[1]; $type = ($exp->matchlist)[0]; exp_continue; } ],
+           [ qr/Running default software/ => sub { } ],
+           [ qr/(\S+)K bytes of processor board System flash \(Read\/Write\)/
+                => sub { $flashsize = ($exp->matchlist)[0]; exp_continue; } ],
+           [ "Configuration register" => sub { if ($type eq "unknown" || $ver eq "unknown") { exp_continue; } } ],
+           [ timeout => sub { die "*** $host: Timed out processing sh ver\n"; } ],
+           [ eof => sub { die "*** $host: Unexpected eof\n"; } ],
+    );
+
+    return ($ver, $type, $proc, $flashsize);
+}
+
+# because this is recursive and returns arrays it needs to be evaluated and "die"
+# when something goes wrong (or you accept death as the consequences of failure)
+sub remote_dir {
+    my $target = shift;
+    my $ios = shift;
+    my $values = shift;
+    my $path = $target;
+    # strip device name from the path
+    $path =~ s/^\S+://;
+    my @files;
+    my @dirs;
+
+    die if (!defined($ios));
+
+    # needed to make sure the previous remote_dir command doesn't cause this
+    # one to match '#' or something.
+    $exp->clear_accum();
+    $exp->send("dir $target\r");
+    $exp->expect(100,
+            # matching flags, date or <no date>, time offset or space, filename
+            [ qr/\s+\d+\s+(\S{4})\s+\d+\s+(\w{3}\s+\d+\s+\d{4}\s+\d+:\d+:\d+|<no date>)(\s+[\+\-]\d+:\d+\s+|\s+)(\S+)/ =>
+                sub {   my $file = ($exp->matchlist)[3];
+                        my $flags = ($exp->matchlist)[0];
+                        if ($file eq $ios && !$values->{force}) {
+                            die "Staged version current.\n";
+                        }
+                        if ($flags =~ /^d/ && !$values->{recursive}) {
+                            push(@dirs, "$target/$file/");
+                        } else {
+                            push(@files, "$path$file");
+                        }
+                        exp_continue;
+                    }
+            ],
+            [ qr/#/ => sub { } ],
+            [ timeout => sub { die "*** Timeout at dir $target\n"; } ]
+    );
+
+    # this has to happen after the current directory parsing is complete
+    for(@dirs) {
+        push(@files, remote_dir($_, $ios, $values));
+    }
+
+    return @files;
+
+}
+
+sub delete_files {
+    my $device = shift;
+    my $values = shift;
+    my @files = @_;
+
+    my %pfiles = map { $_ => 1; } $values->{protected_files};
+
+    for (@files) {
+        next if ($pfiles{$_});
+        if ($values->{recursive}) {
+            $exp->send("delete /recursive /force $device:$_\r");
+        } else {
+            $exp->send("delete $device:$_\r");
+        }
+        $exp->expect(100,
+            [ qr/Examine files in directory/ => sub { $exp->send("y"); exp_continue } ],
+            [ qr/Delete filename/ => sub { $exp->send("\r"); exp_continue } ],
+            [ qr/Delete.*\[confirm\]/ => sub { $exp->send("y"); exp_continue } ],
+            [ qr/#/ => sub { } ],
+            [ timeout => sub { die "*** Timeout at delete file\n"; } ] );
+    }
+}
+
+sub squeeze {
+
+    my $device = shift;
+
+    $exp->send("squeeze $device:\r");
+    $exp->expect(100,
+        [ qr/All deleted files will be removed. Continue\? \[confirm\]/ => sub { $exp->send("y"); exp_continue } ],
+        [ qr/Squeeze operation may take a while. Continue\? \[confirm\]/ => sub { $exp->send("y"); exp_continue } ],
+        [ qr/#/ => sub { } ],
+        [ timeout => sub { die "*** Timeout at delete file\n"; } ] );
+}
+
+
+=head2 resolve_values
+
+Given the type and processor, this will call find_type to see if we have a
+regex that matches this device type and processor.
+
+Returns a hash reference to the values.
+
+=cut
+
+sub resolve_values {
+    my ($type, $proc) = @_;
+    my %values = %defaults;
+
+    my $model = find_type($type, $proc);
+    if (defined($model)) {
+        # add things from the determined model, these have middle priority
+        @values{ keys %$model } = values %$model;
+    }
+
+    # add things from the CLI, these have highest priority.  Don't overwrite
+    # if value=undef
+    foreach my $key ( keys %config ) {
+        next if (!defined($config{$key}));
+        $values{$key}=$config{$key};
+    }
+
+    return \%values;
+}
+
+
+
+HOST: for (@ARGV) {
+    my $host = $_;
+    my $prompt = "";
+    $exp->soft_close() if ($exp->pid());
+    $exp = Expect->spawn("$defaults{logincmd} $host");
+    $exp->expect(15,
+           [ qr/(\S+)#/ => sub { $prompt = ($exp->matchlist)[0]; } ],
+           [ timeout => sub { die "*** Timed out in Connecting to $host\n"; } ]);
+
+    $exp->send("term len 0\r");
+
+    my ($ver, $type, $proc, $flashsize) = eval { get_version($host) };
+    if ($@) {
+        say "$host: can't determine version/processor information $@";
+        next HOST;
+    }
+
+    my $values = resolve_values($type, $proc);
+
+    my $ios = $values->{code};
+    my $archive  = $values->{archive};
+    my $dir = $values->{dir};
+    my $device = $values->{device};
+    my $squeeze = $values->{squeeze};
+    my $srv = $values->{server};
+    my $ftpuser = $values->{ftpuser};
+    my $ftppass = $values->{ftppass};
+    my $proto = $values->{proto};
+    my $bootflash = $values->{bootflash};
+    my $bootdev = $values->{bootdev};
+
+    my $user = "";
+    if ($proto eq "ftp") {
+        $user = "$ftpuser:$ftppass\@";
+    }
+
+    if (!defined($ios)) {
+        print "Unknown device type $type.  No IOS available\n";
+        $exp->send("exit\r");
+        $exp->soft_close();
+        next HOST;
+    }
+
+    if (defined($values->{flashsize}) && $flashsize < $values->{flashsize}) {
+        say 'Flash is not large enough to support code ('.$flashsize. ' < '.  values->{flashsize} . ')';
+        next HOST;
+    }
+
+
+    # get rid of everything prior to the last /
+    $ver =~ s/(flash|slot0|disk[0-9])://;
+    $ver =~ s#.*/(\S+)#$1#;
+
+    $exp->expect(100, '-re', '#');
+
+    my @files;
+    if (($ver eq $ios || ($archive && $ver eq $archive)) && !$values->{force}) {
+        print "Version already current.\n";
+    } else {
+        eval { @files = remote_dir("$device:", $ios, $values) };
+
+        if (!($@)) {
+            if ($archive) {
+                $exp->send("archive download-sw /overwrite $proto://$user$srv/$dir/$ios\r");
+                wait_for_download();
+            } else {
+                delete_files($device, $values, @files) if ($values->{delete});
+                squeeze($device) if ($squeeze);
+
+                $exp->send("copy $proto://$user$srv/$dir/$ios $device:\r");
+                wait_for_download();
+                send_verify($values->{verify}, "$device:$ios");
+            }
+        }
+    }
+
+    my @bootfiles;
+    eval { @bootfiles = remote_dir("$bootdev:", $bootflash, $values); };
+    if (!($@)) {
+        delete_files($bootdev, $values, @bootfiles) if ($values->{delete});
+        squeeze($bootdev) if ($squeeze);
+
+        $exp->send("copy $proto://$user$srv/$dir/$bootflash $bootdev:\r");
+        wait_for_download();
+        send_verify($values->{verify}, "$device:$bootflash");
+    }
+
+    $exp->send("reload\ry") if ($values->{reload});
+    $exp->send("exit\r");
+    $exp->soft_close();
+}
+

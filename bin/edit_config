@@ -1,0 +1,86 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Term::Menu;
+use feature 'switch';
+use feature 'say';
+no warnings 'experimental::smartmatch';
+my $prompt = new Term::Menu;
+
+
+sub addoption {
+    my $device = shift;
+
+    my $menuhash = {
+            server    => ["Server", '1'],
+            protocol  => ["Protocol", '2'],
+            verify    => ["Verify", '3'],
+            delete    => ["Delete", '4'],
+            squeeze   => ["Squeeze", '5'],
+            ftpuser   => ["ftpuser", '6'],
+            ftppass   => ["ftppass", '7'],
+            dir       => ["directory", '8'],
+            device    => ["device", '9'],
+            logincmd  => ["logincmd", '10'],
+            force     => ["force", 11],
+
+            help      => ["Help", '?'],
+            back      => ["Back to main menu", 'b'],
+    };
+
+    if ($device) {
+        $menuhash = { %{$menuhash},
+            code      => ["Code", 12],
+            bootflash => ["Bootflash", 13],
+            bootdev   => ["Boot Device", 14],
+            flashsize => ["Flash Size", 15],
+        };
+    }
+    ADDOPTION: while(1) {
+        my $ans = $prompt->menu( %{$menuhash} );
+        given ($ans) {
+            when ('help') { }
+            when ('back') { say 'Returning to main menu.'; last ADDOPTION; }
+        }
+    }
+}
+
+sub adddevice {
+    ADDDEVICE: while(1) {
+        my $ans = $prompt->menu(
+            regexp    => ["Enter a regular expression that matches the device model", '1'],
+            options   => ["Add default options for the device model", 2],
+
+            help      => ["Help", '?'],
+            back      => ["Back to main menu", 'b'],
+        );
+        given ($ans) {
+            when ('options') { addoption(1); }
+            when ('regexp') { }
+            when ('help') { }
+            when ('back') { say 'Returning to main menu.'; last ADDDEVICE; }
+        }
+    }
+}
+
+
+sub mainmenu {
+    MAINMENU: while (1) {
+        my $ans = $prompt->menu(
+            addrouter => ["Add a router", '1'],
+            adddevice => ["Add a device type", '2'],
+            addoption => ["Add a default option", '3'],
+            quit      => ["Quit", 'q'],
+        );
+        given ($ans) {
+            when ('addrouter') { }
+            when ('adddevice') { adddevice; }
+            when ('addoption') { addoption; }
+            when ('quit') { say 'quitting.'; last MAINMENU; }
+        }
+    }
+}
+
+mainmenu();
+exit;
