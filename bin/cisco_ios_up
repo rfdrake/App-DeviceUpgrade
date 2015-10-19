@@ -87,6 +87,10 @@ my @codes = (
     { "WS-C3550-48" => { code => "", dir => "IOS/c3550" } },
 );
 
+my $devices = {
+
+};
+
 
 my $exp = new Expect;
 
@@ -99,6 +103,10 @@ sub find_type {
         next if (defined($proc) && defined($value->{proc}) && ($proc ne $value->{proc}));
         return $value if ($t =~ $type);
     }
+}
+
+sub find_device {
+    $devices->{$_[0]} if $devices->{$_[0]};
 }
 
 sub send_verify {
@@ -223,7 +231,6 @@ sub delete_files {
 }
 
 sub squeeze {
-
     my $device = shift;
 
     $exp->send("squeeze $device:\r");
@@ -237,21 +244,38 @@ sub squeeze {
 
 =head2 resolve_values
 
-Given the type and processor, this will call find_type to see if we have a
+This takes the values from defaults, the model, the devices and the CLI
+configuration tables and combines them.
+
+First it loads the defaults.
+
+Then, given the type and processor, this will call find_type to see if we have a
 regex that matches this device type and processor.
+
+If found it adds that to the configuration values.
+
+Then, given the device hostname it calls find_device.
+If it finds a match it adds that configuration to the values.
+
+Finally it looks at the CLI options and adds those to the hash if found.
 
 Returns a hash reference to the values.
 
 =cut
 
 sub resolve_values {
-    my ($type, $proc) = @_;
+    my ($host, $type, $proc) = @_;
     my %values = %defaults;
 
     my $model = find_type($type, $proc);
     if (defined($model)) {
         # add things from the determined model, these have middle priority
         @values{ keys %$model } = values %$model;
+    }
+
+    my $device = find_device($host);
+    if (defined($device)) {
+        @values{ keys %$device } = values %$device;
     }
 
     # add things from the CLI, these have highest priority.  Don't overwrite
@@ -283,7 +307,7 @@ HOST: for (@ARGV) {
         next HOST;
     }
 
-    my $values = resolve_values($type, $proc);
+    my $values = resolve_values($host, $type, $proc);
 
     my $ios = $values->{code};
     my $archive  = $values->{archive};
