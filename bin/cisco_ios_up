@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Expect;
 use Getopt::Long;
+use feature 'say';
 
 $Expect::Log_Stdout=1;
 
@@ -140,7 +141,7 @@ sub wait_for_download {
 
 sub get_version {
     my $host = shift;
-    my ($ver,$type,$flashsize,$proc);
+    my ($flashsize,$proc);
     my $type = "unknown";
     my $ver = "unknown";
 
@@ -334,7 +335,7 @@ HOST: for (@ARGV) {
     }
 
     if (defined($values->{flashsize}) && $flashsize < $values->{flashsize}) {
-        say 'Flash is not large enough to support code ('.$flashsize. ' < '.  values->{flashsize} . ')';
+        say "Flash is not large enough to support code ($flashsize < $values->{flashsize})";
         next HOST;
     }
 
