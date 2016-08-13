@@ -1,0 +1,11 @@
+---
+delete: 1
+device: flash
+dir: IOS
+ftppass: YOURFTPPASSWORD
+ftpuser: YOURFTPUSERNAME
+logincmd: tel
+proto: ftp
+server: YOURFTPSERVER
+squeeze: 0
+verify: 1

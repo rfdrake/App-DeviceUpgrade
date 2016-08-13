@@ -1,0 +1,138 @@
+---
+- 26(2|1)[0-1]$:
+    code: c2600-telco-mz.123-26.bin
+    dir: IOS/2600
+    flashsize: '16384'
+- 26(5|2|1)[0-1]XM$:
+    code: c2600-advipservicesk9-mz.124-25c.bin
+    dir: IOS/2600
+    flashsize: '32768'
+    squeeze: 1
+- uBR711[14]:
+    code: ubr7100-ik8su2-mz.123-23.BC8.bin
+    device: disk0
+    dir: IOS/ubr7100
+- uBR7225VXR:
+    code: ubr7200p-jk9su2-mz.122-33.SCH5.bin
+    device: disk2
+    dir: ubr7200
+    proc: NPE-G2
+    proto: ftp
+- uBR7246VXR:
+    bootdev: bootflash
+    bootflash: ubr7200-kboot-mz.122-33.SCF.bin
+    code: ubr7200-jk9su2-mz.122-33.SCF.bin
+    device: disk2
+    dir: IOS/ubr7200
+    proc: UBR7200-NPE-G1
+- uBR72(23|46):
+    bootdev: slot0
+    bootflash: ubr7200-boot-mz.123-21a.BC4.bin
+    code: ubr7200-ik9su2-mz.123-21a.BC4.bin
+    device: disk1
+    dir: IOS/ubr7200
+- AIR-AP123(1G|2AG|0B)-A-K9:
+    archive: c1200-k9w7-mx.123-8.JEE
+    code: c1200-k9w7-tar.123-8.JEE.tar
+    dir: IOS/1200
+- AIR-AP1220-IOS-UPGRD:
+    archive: 1
+    code: c1200-k9w7-tar.123-8.JEE.tar
+    dir: IOS/1200
+- '2811':
+    code: c2800nm-adventerprisek9-mz.124-25d.bin
+    dir: IOS/2800
+- 7120-(T3|4T1):
+    code: c7100-ik9s-mz.123-12e.bin
+    dir: IOS/7100
+- WS-C650[369].*:
+    proc: SR71000
+    code: s72033-advipservicesk9_wan-mz.122-18.SXF15a.bin
+    dir: IOS/6500
+    device: disk0
+- WS-C650[369].*:
+    proc: R7000
+    code: s222-adventerprisek9_wan-mz.122-18.SXF16.bin
+    dir: IOS/6500
+    device: disk0
+- ME-2400.*:
+    code: me240x-metrobasek9-mz.122-50.SE1.bin
+    dir: IOS/ME2400
+- ME-3400.*:
+    code: me340x-metroipaccessk9-mz.122-55.SE.bin
+    dir: IOS/ME3400
+- ME-C6524GT-8S:
+    code: s6523-advipservicesk9-mz.122-33.SXH8b.bin
+    dir: IOS/ME6500
+- WS-C3750.*:
+    code: c3750-ipservicesk9-mz.122-50.SE1.bin
+    dir: IOS/3750
+- WS-C2960-.*:
+    archive: '1'
+    code: c2960-lanbasek9-tar.122-50.SE3.tar
+    dir: IOS/2960
+- WS-C3550-12G:
+    code: c3550-ipservicesk9-mz.122-44.SE6.bin
+    dir: IOS/3550
+- WS-C29(50|50G|50T)-.*:
+    code: c2950-i6k2l2q4-mz.121-22.EA13.bin
+    dir: IOS/2950
+- WS-C29(40)-.*:
+    code: c2940-i6k2l2q4-mz.121-22.EA14.bin
+    dir: IOS/2940
+- 371098-001:
+    archive: '1'
+    code: cgesm-lanbasek9-tar.122-50.SE3.tar
+    dir: IOS/GESM
+- WS-CBS3020-HPQ:
+    archive: '1'
+    code: cbs30x0-ipbasek9-tar.122-58.SE1.tar
+    dir: IOS/GESM
+- WS-C3560-48PS:
+    code: c3560-ipbasek9-mz.122-50.SE1.bin
+    dir: IOS/3560
+- '3745':
+    code: c3745-adventerprisek9-mz.124-25d.bin
+    device: flash
+    dir: IOS/3745
+- '1841':
+    code: c1841-advipservicesk9-mz.124-25a.bin
+    dir: IOS/1800
+- 7120-T3:
+    code: c7100-ik9s-mz.123-3i.bin
+    device: disk0
+    dir: IOS/7100
+- 7401ASR:
+    code: c7400-ik9o3s-mz.124-15.T7.bin
+    device: disk0
+    dir: IOS/7400
+- IAD2420:
+    code: c2420-a2i8k8sv5-mz.123-20.bin
+    dir: IOS/IAD2420
+- IAD2430:
+    code: c2430-i6k9o3s-mz.124-15.T8.bin
+    device: slot0
+    dir: IOS/IAD2430
+- IAD2432:
+    code: c2430-ik9o3s-mz.124-15.T7.bin
+    device: flash
+    dir: IOS/IAD2430
+- VG224:
+    code: vg224-i6s-mz.150-1.M3.bin
+    device: slot0
+    dir: IOS/VG224
+- WS-C3524-(PWR-)?XL:
+    code: c3500xl-c3h2s-mz.120-5.WC17.bin
+    dir: IOS/3500XL
+    no_recursive: '1'
+- WS-C29(24|12).?-XL:
+    code: c2900xl-c3h2s-mz.120-5.WC17.bin
+    dir: IOS/2900XL
+    no_recursive: '1'
+- WS-C3550-48:
+    code: c3550-ipservicesk9-mz.122-44.SE6.bin
+    dir: IOS/c3550
+- ASR-920-4SZ-A:
+    code: asr920-universalk9_npe.03.16.02a.S.155-3.S2a-ext.bin
+    device: flash
+    dir: IOS/ASR920
