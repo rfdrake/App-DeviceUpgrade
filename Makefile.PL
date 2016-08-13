@@ -5,6 +5,8 @@ all_from       'bin/cisco_ios_up';
 
 requires       'Expect'  => '0.0';
 requires       'Getopt::Long';      # core
+requires       'YAML::XS';
+requires       'Const::Fast';
 
 install_script  'bin/cisco_ios_up';
 

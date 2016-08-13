@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 
 use strict;
+use warnings;
+no warnings 'uninitialized';
 use Expect;
 use Getopt::Long;
 use YAML::XS qw (LoadFile Dump);
@@ -8,7 +10,6 @@ use Const::Fast;
 use v5.10; # for say
 
 $Expect::Log_Stdout=1;
-# since const has to be run this needs to be declared before the call to main()
 my $exp = Expect->new;
 my $defaults = [];
 my $config = {};
@@ -18,7 +19,6 @@ my @default_protected_files = ( 'config.txt', 'private-config', 'private-config.
 
 my %protected_files = map { $_ => 1 } @default_protected_files;
 
-const my $app_name => 'cisco_ios_up';
 __PACKAGE__->main() unless caller;
 
 sub usage {
@@ -76,7 +76,7 @@ sub load_config {
     my ($file, $path) = @_;
     my $xdg = $ENV{XDG_CONFIG_HOME} || "$ENV{HOME}/.config";
     $file ||= 'types.yaml';
-    $path ||= [ "/etc/$app_name/$file", "$xdg/$app_name/$file" ];
+    $path ||= [ "/etc/deviceupgrader/$file", "$xdg/deviceupgrader/$file" ];
     push(@$path, $ENV{CISCOIOSUP_RC}) if (defined($ENV{CISCOIOSUP_RC}));
 
     foreach my $conf (@$path) {
@@ -94,7 +94,7 @@ sub find_type {
     for(@$codes) {
         my ($type) = keys(%$_);
         my $value = $_->{$type};
-        say "Considering $type" if ($config->{debug});
+        say "Considering $t =~ $type, $proc eq $value->{proc}" if ($config->{debug});
         next if (defined($proc) && defined($value->{proc}) && ($proc ne $value->{proc}));
         return $value if ($t =~ $type);
     }
@@ -102,9 +102,7 @@ sub find_type {
 }
 
 sub send_verify {
-    my $verify = shift;
-    my $image = shift;
-    return if (!$verify);
+    my ($image) = @_;
     $exp->send("verify /md5 $image\r");
     $exp->expect(30,
              [ qr/\./ => sub { exp_continue; } ],
@@ -123,21 +121,21 @@ sub wait_for_download {
 
 
 sub get_version {
-    my ($ver,$type,$flashsize,$proc);
+    my ($flashsize,$proc);
     my $type = "unknown";
     my $ver = "unknown";
 
     $exp->send("sh ver\r");
 
-    # since we didn't pass $host our failures can't include it.  We might want
-    # to figure out how to soft-fail here and pass that back to the main code
-    # to have it hard failure.
     $exp->expect(100,
            [ qr/System image file is "(\S+)"/ => sub { $ver = ($exp->matchlist)[0]; exp_continue; } ],
            [ qr/[Cc]isco (\S+)\s+\((.*?)\).*?with \d+K/ => sub { $proc = ($exp->matchlist)[1]; $type = ($exp->matchlist)[0]; exp_continue; } ],
+           # override for cisco 6500 where they get the proc type wrong
+           [ qr/(\S+) CPU at \d+Mhz/ => sub { $proc = ($exp->matchlist)[0]; exp_continue; } ],
            [ qr/Running default software/ => sub { } ],
            [ qr/(\S+)K bytes of processor board System flash \(Read\/Write\)/
                 => sub { $flashsize = ($exp->matchlist)[0]; exp_continue; } ],
+           # this is normally the last line of sh ver
            [ "Configuration register" => sub { if ($type eq "unknown" || $ver eq "unknown") { exp_continue; } } ],
            [ timeout => sub { die "*** Timed out processing sh ver\n"; } ],
            [ eof => sub { die "Unexpected eof\n"; } ],
@@ -254,7 +252,7 @@ sub upload {
 
         $exp->send("copy $url $device:\r");
         wait_for_download();
-        send_verify($values->{verify}, "$device:$ios");
+        send_verify("$device:$ios") if ($values->{verify});
     }
 }
 
@@ -264,6 +262,11 @@ sub main {
 
     $defaults = load_config('defaults');
     $codes = load_config('types');
+
+    # some defaults if they didn't put them in the defaults file
+    $defaults->{proto} ||= 'tftp';
+    $defaults->{device} ||= 'flash';
+    $defaults->{logincmd} ||= 'clogin';
 
     HOST: for (@ARGV) {
         my $host = $_;
