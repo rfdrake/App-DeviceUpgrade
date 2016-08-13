@@ -1,7 +1,7 @@
-cisco_ios_up
-============
+Device Upgrader
+===============
 
-Automated Cisco IOS upgrade scripts
+Automated firmware upgrade scripts
 
 These were written to be used by myself and I never really had documentation
 in mind when making them.  Whenever I wanted someone else to use them I've
@@ -10,9 +10,20 @@ without explaining the setup.
 
 I'll attempt to explain the setup here.
 
-The script is used to automate IOS upgrades across a wide variety of Cisco
-hardware.  It's designed to be okay to run it in bulk, but there may be
-circumstances where the error handling doesn't do a good job.
+Setup
+=====
+
+First you need to put configuration files in the proper places.  Example
+configuration files are in the "examples" directory.
+
+You can either put them in $HOME/.config/deviceupgrader or if multiple users
+will use the script, you can put them in /etc/deviceupgrader.
+
+Hopefully the yaml syntax is self-explanatory and you can figure it out from
+the examples.  Basically you supply a regex that will match the device model,
+then supply the configuration parameters and what firmware to use.
+
+You will need to edit defaults.yaml and put your FTP/TFTP server information.
 
 scripts
 =======
@@ -20,13 +31,9 @@ scripts
 cisco_ios_up
 ------------
 
-This is the main script.  The tftp server and available IOS' are defined at
-the top of the file.  You'll want to change most of the defaults unless you
-happen to have the same hardware we do.
-
-The file supports regex for the cisco model so if you have several different
-models that use the same code you can create a general config that works for
-all of them.
+The script is used to automate IOS upgrades across a wide variety of Cisco
+hardware.  It's designed to be okay to run it in bulk, but there may be
+circumstances where the error handling doesn't do a good job.
 
 Getting Started
 ===============
@@ -45,15 +52,18 @@ I advise you to read the output logs carefully before reloading all your
 devices, since an error while copying may leave the device without a
 functioning OS.
 
+As an alternative, you can grab my "tel" program which can do the same
+functions as clogin, but has a few more capabilities.
+
+    https://github.com/rfdrake/tel
+
 TODO
 ====
 
-Except where otherwise noted, here are the faults.
-
-cisco_ios_up needs a config file: Most of the code changes are me changing IOS
-revisions or supported devices.. this could all be stored in a file.
+Except where otherwise noted, here are the faults:
 
 no ability to unit test (if I rewrote the code to use modules then I could
 test most individual functions.  As of right now you would need to write a
 router emulator to test the entire thing rather than testing pieces of it)
 
+protected_files is not a configuration option yet.  I need to fix this.
