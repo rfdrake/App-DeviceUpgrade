@@ -76,7 +76,7 @@ sub load_config {
     my ($file, $path) = @_;
     my $xdg = $ENV{XDG_CONFIG_HOME} || "$ENV{HOME}/.config";
     $file ||= 'types.yaml';
-    $path ||= [ "/etc/deviceupgrader/$file", "$xdg/deviceupgrader/$file" ];
+    $path ||= [ "$xdg/deviceupgrader/$file", "/etc/deviceupgrader/$file" ];
     push(@$path, $ENV{CISCOIOSUP_RC}) if (defined($ENV{CISCOIOSUP_RC}));
 
     foreach my $conf (@$path) {
