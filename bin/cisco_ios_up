@@ -22,7 +22,9 @@ my %protected_files = map { $_ => 1 } @default_protected_files;
 __PACKAGE__->main() unless caller;
 
 sub usage {
+    my $version = eval { require "App/DeviceUpgrade.pm"; return $App::DeviceUpgrade::VERSION; };
     my $usage = qq {
+    cisco_ios_up version $version
     Usage: cisco_ios_up [flags] <hostname>
 
         toggle flags:
@@ -69,6 +71,7 @@ sub _get_options {
         "ftppass=s"             => \$config->{ftppass},
         "force!"                => \$config->{force},
         "debug!"                => \$config->{debug},
+        "version!"              => \$config->{version},
     );
 }
 
@@ -258,7 +261,7 @@ sub upload {
 
 sub main {
     _get_options();
-    die usage . "\n" if scalar @ARGV == 0;
+    die usage . "\n" if (scalar @ARGV == 0 || $config->{version});
 
     $defaults = load_config('defaults');
     $codes = load_config('types');
