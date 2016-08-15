@@ -39,9 +39,9 @@ expect {
 }
 
 expect \#
-send "sh flash\r" 
+send "sh flash\r"
 #          filenum deleted?     img/unk   crc          seek      nlen    len
-expect { 
+expect {
    -re "\[0-9] +\[D-E\.]+ +\[a-z]+ +(\[A-Z0-9]+) +\[A-Z0-9]+ +\[0-9]+ +\[0-9]+ \[A-Za-z]+ \[0-9]+ \[0-9]+ ..:..:.. (\[a-z0-9A-Z\.\-]+)" {
        set newcrc $expect_out(1,string);
        set name $expect_out(2,string);
@@ -56,7 +56,7 @@ expect {
 }
 
 send "format slot0:\r"
-expect "Format operation may" 
+expect "Format operation may"
 send "yy"
 set timeout 59
 # Hack to make sure router doesn't kick us off for inactivity
@@ -70,7 +70,7 @@ send "copy $proto: flash\r"
 expect {
   "Address or name of remote host" { send "$tftpserver\r"; exp_continue }
   "Source username" { send "noc\r"; exp_continue }
-  "Source filename" { send "ios/$platform/$code\r"; exp_continue } 
+  "Source filename" { send "ios/$platform/$code\r"; exp_continue }
   "Destination filename" { send "\r" }
 }
 
@@ -83,22 +83,22 @@ expect {
 send "sh flash\r"
 
 set found 0
-expect { 
+expect {
    -re "\[0-9] +\[D-E\.]+ +\[a-z]+ +(\[A-Z0-9]+) +\[A-Z0-9]+ +\[0-9]+ +\[0-9]+ \[A-Za-z]+ \[0-9]+ \[0-9]+ ..:..:.. (\[a-z0-9A-Z\.\-]+)" {
        set newcrc $expect_out(1,string);
        set name $expect_out(2,string);
        if { $name == $code } {
           if { $newcrc != $crc } {
-             send_user "\n\n%%% $router - Error: CRC does not match on new staged code\n"; 
-          } 
-          set found 1              
+             send_user "\n\n%%% $router - Error: CRC does not match on new staged code\n";
+          }
+          set found 1
        }
        exp_continue
    }
    "\#" { }
 }
 
-if { $found == 0 } { 
+if { $found == 0 } {
    send_user "\n\n%%% $router - Error: Code not found after staging\n"
 }
 

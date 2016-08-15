@@ -22,7 +22,7 @@ my %protected_files = map { $_ => 1 } @default_protected_files;
 __PACKAGE__->main() unless caller;
 
 sub usage {
-    my $version = eval { require "App/DeviceUpgrade.pm"; return $App::DeviceUpgrade::VERSION; };
+    my $version = eval { require App::DeviceUpgrade; return $App::DeviceUpgrade::VERSION; };
     my $usage = qq {
     cisco_ios_up version $version
     Usage: cisco_ios_up [flags] <hostname>
@@ -101,7 +101,7 @@ sub find_type {
         next if (defined($proc) && defined($value->{proc}) && ($proc ne $value->{proc}));
         return $value if ($t =~ $type);
     }
-    return undef;
+    return;
 }
 
 sub send_verify {
